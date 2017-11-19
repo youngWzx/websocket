@@ -5,55 +5,87 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Document</title>
-</head>
-<script>
-  function ajax({url,method,data,success,error}){
-    var xhr = window.XMLHttpRequest ? new XMLHttpRequest : new ActiveXObject('Microsoft.XMLHTTP');
-    var params=[];
-    for (const key in data) {
-      params.push(`${key}=${data[key]}`);
+  <script src="http://localhost:8099/socket.io/socket.io.js"></script>
+  <style>
+    .mine{
+      background: #ffff00
     }
-    const reqUrl = (params.length&&(method==='GET')) ? `url?${params.join('&')}`: url;
-    xhr.open(method,reqUrl,true);
-    if (method==='POST' && params.length) {
-      xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-      xhr.send(params.join('&'))
-    } else {
-      xhr.send();
-    }
-    xhr.onreadystatechange = function(){
-      if (xhr.readyState === 4) {
-        if (xhr.ststus === 200) {
-          success(xhr.resonsetext)
-        }
+  </style>
+  <script>
+    window.onload=function(){
+      let user = '';
+      const sock = io.connect('ws://localhost:8099');
+      const oInputuser = document.getElementById('user');
+      const oInputpass = document.getElementById('pass');
+      const oButtonreg = document.getElementById('reg');
+      const oButtonlogin = document.getElementById('login');
+      const oButtonsend = document.getElementById('btn_send');
+      const oUl = document.getElementById('ul1');
+      const oText = document.getElementById('txt1');
+
+      oButtonreg.onclick = function(){
+        const username = oInputuser.value;
+        const password = oInputpass.value;
+
+        sock.emit('reg',username,password);
       }
-    }
-  }
-  window.onload=function(){
-    alert('真是日了')
-    console.log('sss')
-    var oInputUser = document.getElementById('user')
-    var oInputPass = document.getElementById('password');
-    var oButtonReg = document.getElementById('reg');
-    oButtonReg.onclick = function(){
-      console.log('111')
-      var username = document.getElementById('user').value;
-      var password = encodeURIComponent(document.getElementById('password').value);
-      console.log(username)
-      ajax({
-        url:'/reg',
-        data:{
-          username,
-          password,
-        },
-        method:'POST',
+
+      oButtonlogin.onclick = function(){
+        const username = oInputuser.value;
+        const password = oInputpass.value;
+        user = username;
+        sock.emit('login',username,password);
+      }
+
+      oButtonsend.onclick=function (){
+        sock.emit('msg', oText.value);
+      };
+
+      sock.on('reg_ret',function(code,msg){
+        alert(msg);
+      })
+
+      sock.on('login_ret',function(code,msg){
+        if (code !== 0) {
+          alert('登录失败'+msg)
+          user = '';
+        } 
+        console.log('登录成功')
+      })
+
+      sock.on('msg',(user,txt)=>{
+        const oLi = document.createElement('li');
+        oLi.innerHTML=`<h4>${user}</h4><p>${txt}</p>`;
+        oUl.appendChild(oLi);
+        oText.value='';
+      })
+
+      sock.on('msg_ret',(code,msg)=>{
+        if (code!==0) {
+          alert('消息发送失败，'+msg);
+        }else{
+          let oLi=document.createElement('li');
+            oLi.className='mine';
+
+            oLi.innerHTML=`<h4>${user}</h4><p>${oText.value}</p>`;
+            oUl.appendChild(oLi);
+
+            oText.value='';
+        }
       })
     }
-  }
-</script>
+  </script>
+</head>
 <body>
-  <input type="text" id="user"/>
-  <input type="text" id="password"/>
-  <input type="button" value="注册" id="reg">
+  <input type="text" id="user" />
+  <input type="text" id="pass" />
+  <input type="button" value="注册" id="reg" />
+  <input type="button" value="登录" id="login" /> 
+  <hr>
+  <textarea id="txt1" rows="4" cols="80"></textarea>
+  <input type="button" value="发送" id="btn_send"><br>
+  <ul id="ul1">
+
+  </ul>
 </body>
 </html>
